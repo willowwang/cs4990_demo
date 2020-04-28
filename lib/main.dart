@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'new_food.dart';
 import 'food.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(MyApp());
 
@@ -114,6 +115,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
   Widget buildListTile(item, index){
+    DateTime expires = item.expirationDate;
+    DateTime now = DateTime.now();
+    Duration difference = expires.difference(now);
+    int diffInDays = difference.inDays;
+
     return ListTile(
       onTap: () => changeItemCompleteness(item),
       onLongPress: () => goToEditItemView(item),
@@ -125,6 +131,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             decoration: item.completed ? TextDecoration.lineThrough : null
         ),
       ),
+      subtitle: Text('in $diffInDays days'),  //stuck with the name of this term for ...
       trailing: Icon(item.completed
           ? Icons.check_box
           : Icons.check_box_outline_blank,
@@ -139,17 +146,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     });
   }
 
-  void goToNewItemView(){
-    //push the new food items to the navigator stack. by using a
-    //MaterialPageRoute we get standard behaviour of a Material app, which will
-    //show a back button automatically for each platform on the left top corner
-    Navigator.of(context).push(MaterialPageRoute(builder: (context){
+  void goToNewItemView() async {
+    final ScreenArguments foodInfo = await Navigator.of(context).push(MaterialPageRoute(builder: (context){
       return NewFoodView();
-    })).then((title){
-      if(title != null){
-        addItem(Food(title:title));
-      }
-    });
+    }));
+
+    if(foodInfo != null) {
+      addItem(Food(title:foodInfo.foodName, expirationDate: foodInfo.expirationDate));
+    }
   }
 
   void addItem(Food item){
@@ -159,21 +163,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       animatedListKey.currentState.insertItem(0);
   }
 
-  void goToEditItemView(Food item) {
+
+  void goToEditItemView(Food item) async {
     //here reuse the NewFoodView class and push it to the navigator stack just
     //like before, but now we send the title of the item on the class constructor
     //and expect a new title to be returned so that we can edit the item
-    Navigator.of(context).push(MaterialPageRoute(builder: (context){
+
+    final ScreenArguments foodInfo = await Navigator.of(context).push(MaterialPageRoute(builder: (context){
       return NewFoodView(item: item);
-    })).then((title){
-      if(title != null){
-        editItem(item, title);
-      }
-    });
+    }));
+
+    if(foodInfo != null) {
+      editItem(item, foodInfo);
+    }
   }
 
-  void editItem(Food item, String title){
-    item.title = title;
+  void editItem(Food item, ScreenArguments foodInfo){
+    item.title = foodInfo.foodName;
+    item.expirationDate = foodInfo.expirationDate;
   }
 
   void removeItemFromList(Food item, int index){
